@@ -6,7 +6,7 @@ import { parseDecision } from '../lib/vision.js'
 import { nextMove } from '../lib/policy.js'
 import { actionToTestGame, describeMemoryState, describeProcessMemory } from '../lib/memory.js'
 import { mapRegionPoint } from '../lib/capture.js'
-import { parseDshowDevices } from '../lib/voice.js'
+import { parseDshowDevices, parseMeanVolume } from '../lib/voice.js'
 import { parsePersonaYaml, withPersona } from '../lib/persona.js'
 import { buildVoiceMessages } from '../lib/dialogue.js'
 import { createGame, serialize, step } from '../test-game/game.js'
@@ -61,6 +61,12 @@ test('persona yaml parser reads block and inline forms', () => {
   const prompt = withPersona('只输出 JSON', block)
   assert.ok(prompt.startsWith('只输出 JSON'))
   assert.ok(prompt.includes('说话带个喵。'))
+})
+
+test('mean volume parser gates silent push-to-talk recordings', () => {
+  assert.equal(parseMeanVolume('[Parsed_volumedetect_0] mean_volume: -91.0 dB'), -91)
+  assert.equal(parseMeanVolume('[Parsed_volumedetect_0] mean_volume: -18.4 dB'), -18.4)
+  assert.equal(parseMeanVolume('no volume here'), null)
 })
 
 test('dshow parser keeps audio devices only', () => {
