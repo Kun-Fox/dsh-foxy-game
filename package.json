@@ -1,6 +1,6 @@
 {
   "name": "dsh-foxy-game",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Let Foxy play games with DSH: window capture, vision decisions, background input, local voice overlay and optional memory adapters.",
   "type": "module",
   "main": "lib/index.js",

@@ -2,9 +2,9 @@
 
 让 Foxy 陪你玩游戏。不是“让模型看一张截图然后祈祷它能操作”，而是把**感知、决策、操作、交流**拆成可替换的适配器，先跑通一个可控的小闭环，再逐个游戏加适配。
 
-> 当前是 `0.1.0` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
+> 当前是 `0.1.1` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
-### 开发进度（2026-11-12 03:40）
+### 开发进度（2026-11-12 03:52）
 
 - 已跑通 DSH 侧栏、窗口枚举、窗口截图、SHA-256 跳帧、视觉模型 JSON 决策、后台动作接口、自测游戏 HTTP 闭环。
 - `npm test`：11/11 通过（设置/脱敏/裁剪参数/键位/视觉解析/策略/自测游戏/memory/插件路由）。
@@ -12,6 +12,7 @@
 - 真实窗口截图：`captureWindow` 对系统设置窗口返回 640×379 JPEG（约 15 KB）；mock 视觉接口收到图片并返回决策。
 - 自测游戏 memory 闭环：观察 → BFS 决策 → HTTP 动作 → 状态更新，已验证。
 - 自动循环：能启动、按截图间隔跳帧、停止；画面未变化时只记 `skip` 日志。
+- `F12` 全局紧急停止：已实测能写入停止标志并让循环停下；启动时自动拉起隐藏热键进程，停止时清理。
 
 ## 设计原则
 
@@ -35,8 +36,9 @@
 
 - DSH 侧栏 `Foxy Game`：窗口选择、截图间隔、跳帧、视觉模型配置、动作模式、自动循环开关、实时日志。
 - `capture.ps1`：枚举窗口，`PrintWindow`/屏幕回退截图，缩放 + JPEG，返回 base64；Node 侧做 SHA-256 跳帧。
+- 安全：自动循环运行时可用 `F12` 全局紧急停止；默认 `enabled:false`，不会自行启动。
 - `vision.js`：OpenAI 兼容的视觉请求，严格 JSON 输出（`analysis/action/say/confidence`）；解析失败会保留原文并报错。
-- `actions.js` + `input.ps1`：键盘按下/抬起/点按、鼠标移动/点击/滚轮、文本；支持 `background`（PostMessage）和 `foreground`（SendInput）。
+- `actions.js` + `input.ps1`：键盘按下/抬起/点按、鼠标移动/点击、文本；支持 `background`（PostMessage）和 `foreground`（SendInput）。
 - `test-game/`：一个本地小游戏 + HTTP 状态/动作 API，用来在没有视觉模型时验证“观测→决策→动作→记忆”闭环。
 - 语音/悬浮字幕：`voice.js`、`overlay.ps1`、`hotkey.ps1` 的本地回路骨架（默认关闭，需要麦克风设备名）。
 - `scripts/stt.py`：本地 SenseVoice 转写后备；TTS 优先 DSH Speech，回退 Windows SAPI。
@@ -117,9 +119,9 @@ test/           Node 内置测试
 - [ ] 真实游戏窗口的 `PrintWindow` 在部分 DirectX 游戏返回黑屏；需要 `Windows.Graphics.Capture` 或 `ffmpeg gdigrab` 回退。
 - [ ] 变化区域目前只做整图哈希；块级 diff / 只发变化区域还没做。
 - [ ] 视觉模型的动作坐标是归一化坐标，未做窗口 DPI 校正；高 DPI 需要实测。
-- [ ] 内存适配器只有 Windows `ReadProcessMemory` 基础能力和自测 HTTP 源，没有具体游戏偏移。
+- [ ] 内存适配器目前只有自测 HTTP 源，**没有**真实进程内存读取或写入。
 - [ ] 语音热键/悬浮窗需要在真实 Windows 会话中验证；当前默认关闭。
-- [ ] 自动循环没有“紧急停止”热键；计划加 `F12` 全局停止。
+- [x] 自动循环支持 `F12` 全局紧急停止（`scripts/stop-hotkey.ps1`）；默认仍不自动启动。
 - [ ] 没有做反作弊检测/规避；这是有意为之，不提供绕过能力。
 
 ## License
