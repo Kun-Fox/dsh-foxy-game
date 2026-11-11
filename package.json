@@ -1,0 +1,57 @@
+{
+  "name": "dsh-foxy-game",
+  "version": "0.1.0",
+  "description": "Let Foxy play games with DSH: window capture, vision decisions, background input, local voice overlay and optional memory adapters.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./capture": "./lib/capture.js",
+    "./actions": "./lib/actions.js",
+    "./vision": "./lib/vision.js",
+    "./test-game": "./test-game/server.mjs"
+  },
+  "files": [
+    "lib",
+    "scripts",
+    "test-game",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test-game": "node test-game/server.mjs",
+    "capture:test": "node -e \"import('./lib/capture.js').then(m=>m.captureWindow({}).then(r=>console.log({ok:r.ok,width:r.width,height:r.height,bytes:r.bytes,changed:r.changed})))\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Kun-Fox",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kun-Fox/dsh-foxy-game.git"
+  },
+  "homepage": "https://github.com/Kun-Fox/dsh-foxy-game#readme",
+  "bugs": {
+    "url": "https://github.com/Kun-Fox/dsh-foxy-game/issues"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "foxy",
+    "game",
+    "agent",
+    "vision",
+    "windows"
+  ],
+  "license": "MIT"
+}
