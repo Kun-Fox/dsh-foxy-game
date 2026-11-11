@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 public static class Win32GameInput {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint flags, int dx, int dy, uint data, UIntPtr extra);
@@ -40,7 +41,7 @@ function Send-Key([int]$vk, [bool]$down) {
   if ($Mode -eq 'background') {
     $msg = if ($down) { $WM_KEYDOWN } else { $WM_KEYUP }
     $lParam = if ($down) { [IntPtr]1 } else { [IntPtr]0xC0000001 }
-    [void][Win32GameInput]::PostMessage($handle, $msg, [IntPtr]$vk, $lParam)
+    [void][Win32GameInput]::SendMessage($handle, $msg, [IntPtr]$vk, $lParam)
   } else {
     $flags = if ($down) { 0 } else { 2 }
     [Win32GameInput]::keybd_event([byte]$vk, 0, $flags, [UIntPtr]::Zero)
@@ -70,13 +71,13 @@ if ($action.type -eq 'key') {
   $px = $point[0]; $py = $point[1]
   if ($Mode -eq 'background') {
     $packed = [IntPtr](($py -shl 16) -bor ($px -band 0xFFFF))
-    [void][Win32GameInput]::PostMessage($handle, $WM_MOUSEMOVE, [IntPtr]::Zero, $packed)
+    [void][Win32GameInput]::SendMessage($handle, $WM_MOUSEMOVE, [IntPtr]::Zero, $packed)
     if ($action.action -ne 'move') {
       $button = [string]$action.button
       $downMsg = if ($button -eq 'right') { $WM_RBUTTONDOWN } elseif ($button -eq 'middle') { $WM_MBUTTONDOWN } else { $WM_LBUTTONDOWN }
       $upMsg = if ($button -eq 'right') { $WM_RBUTTONUP } elseif ($button -eq 'middle') { $WM_MBUTTONUP } else { $WM_LBUTTONUP }
-      if ($action.action -ne 'up') { [void][Win32GameInput]::PostMessage($handle, $downMsg, [IntPtr]1, $packed) }
-      if ($action.action -ne 'down') { [void][Win32GameInput]::PostMessage($handle, $upMsg, [IntPtr]0, $packed) }
+      if ($action.action -ne 'up') { [void][Win32GameInput]::SendMessage($handle, $downMsg, [IntPtr]1, $packed) }
+      if ($action.action -ne 'down') { [void][Win32GameInput]::SendMessage($handle, $upMsg, [IntPtr]0, $packed) }
     }
   } else {
     $screen = New-Object Win32GameInput+POINT
@@ -93,7 +94,7 @@ if ($action.type -eq 'key') {
 } elseif ($action.type -eq 'text') {
   if ($Mode -ne 'background') { throw 'foreground text input is not implemented; use key actions' }
   foreach ($char in ([string]$action.text).ToCharArray()) {
-    [void][Win32GameInput]::PostMessage($handle, $WM_CHAR, [IntPtr][int]$char, [IntPtr]1)
+    [void][Win32GameInput]::SendMessage($handle, $WM_CHAR, [IntPtr][int]$char, [IntPtr]1)
   }
 } else {
   throw "unsupported action type: $($action.type)"
