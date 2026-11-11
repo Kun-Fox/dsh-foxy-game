@@ -15,6 +15,7 @@
 - `F12` 全局紧急停止：已实测能写入停止标志并让循环停下；启动时自动拉起隐藏热键进程，停止时清理。
 - 语音录音停止改为给 ffmpeg 发 `q` 正常收尾，避免直接 kill 留下损坏 WAV；真实麦克风录音仍待验证。
 - 后台输入：`SendMessage` 对原生 WinForms 测试窗实测成功（`D` 使玩家 x+1），且不抢前台；Edge 会忽略合成消息，真实游戏兼容性必须逐个测。
+- 完整屏幕闭环：原生 WinForms 测试窗 `hwnd 122882056` 截图 640×436（8.5 KB）→ mock 视觉返回 `{type:'key',key:'d'}` → 后台 `SendMessage`，玩家 x 从 0 变为 1，前台未切换。
 
 ## 设计原则
 
@@ -62,6 +63,10 @@ npm test
 # 启动自测游戏（另一个终端）
 npm run test-game
 # 浏览器打开 http://127.0.0.1:8787
+
+# 或者启动原生 WinForms 测试窗，专门测后台输入
+powershell -ExecutionPolicy Bypass -File test-game/win.ps1
+# 状态文件：%TEMP%\foxy-win-game.json
 ```
 
 安装到 DSH（开发时）：
