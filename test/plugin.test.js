@@ -31,6 +31,7 @@ test('plugin registers the expected routes and status shape', async () => {
     '/api/dsh-foxy-game/start',
     '/api/dsh-foxy-game/stop',
     '/api/dsh-foxy-game/speak',
+    '/api/dsh-foxy-game/say',
     '/api/dsh-foxy-game/audio/devices',
   ]) assert.ok(routes.has(path), `missing ${path}`)
 
