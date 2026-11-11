@@ -2,7 +2,7 @@
 
 让 Foxy 陪你玩游戏。不是“让模型看一张截图然后祈祷它能操作”，而是把**感知、决策、操作、交流**拆成可替换的适配器，先跑通一个可控的小闭环，再逐个游戏加适配。
 
-> 当前是 `0.1.26` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
+> 当前是 `0.1.27` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
 ### 开发进度（2026-11-12 05:45）
 
@@ -11,7 +11,7 @@
 - 浏览器/Edge 游戏截图已验证：对 Edge 里的 7×7 测试游戏 `PrintWindow` 得到 900×548 JPEG（约 27.8 KB），画面内容完整，不是黑屏。
 - 浏览器游戏代理动作已验证：截图 → mock 视觉返回 `D` → 通过自测游戏 HTTP 桥执行，玩家从 (0,0) 走到 (1,0)；说明“浏览器画面 + 外部状态/动作桥”是可行的，绕开了 Edge 忽略后台键鼠消息的问题。
 - 混合感知已验证：Edge 小花园截图 + 自测游戏 HTTP 状态一起送视觉模型，prompt 同时包含 900×726 JPEG 与 `grid/player/steps` 结构化状态；模型返回 `D` 后玩家从 (0,0) 走到 (1,0)。
-- `npm test`：18/18 通过（设置/脱敏/裁剪参数/键位/视觉解析/策略/自测游戏/memory/插件路由/坐标映射/人设/对话/静音门限/麦克风解析/显式清空 Key/内存写入默认拦截）。
+- `npm test`：19/19 通过（设置/脱敏/裁剪参数/键位/视觉解析/策略/自测游戏/memory/插件路由/坐标映射/人设/对话/静音门限/麦克风解析/显式清空 Key/内存写入默认拦截）。
 - 真实 DSH `foxy-test` profile：侧栏 `Foxy Game` 已出现，`/api/dsh-foxy-game/status` 返回 200。
 - 真实窗口截图：`captureWindow` 对系统设置窗口返回 640×379 JPEG（约 15 KB）；mock 视觉接口收到图片并返回决策。`0.1.12` 起可选 `auto`/`printwindow`/`screen`：`auto` 在 PrintWindow 返回全黑时自动改用屏幕区域，系统设置窗口实测 `printwindow` 14,981 B、`screen` 14,333 B；全黑测试窗 `auto` 正确回退到 `screen`。
 - 自测游戏 memory 闭环：观察 → BFS 决策 → HTTP 动作 → 状态更新，已验证。
@@ -26,7 +26,7 @@
 - PTT 静音门限：录音结束后先用 ffmpeg `volumedetect` 测平均音量，低于 `pttMinVolumeDb`（默认 -45 dB）直接丢弃，避免把环境噪声转成“嗯”。用 1 秒虚拟麦克风录音（31,662 B，-91 dB）和 SAPI 语音 WAV（-26.3 dB）验证了门限两侧。
 - PTT 空录音保护：注入 F8 短暂按下 120 ms 时 ffmpeg 会留下 0 字节 WAV；现在录制时长 <250 ms 或文件 <1 KB 直接跳过，不再把 EOFError 抛到 STT。实测 120 ms 快速按一下不报错、不转写；按住 1.5 秒虚拟静音被 -91 dB 门限丢弃。
 - 文字对 Foxy 说：新增 `POST /api/dsh-foxy-game/say`，走与 PTT 相同的 `onVoiceTranscript` 流程（人设、当前窗口、上一轮画面、最近对话），并新增 `ttsProvider:'none'`（仅字幕）。用 mock LLM 实测返回「我在，先往右走，别撞墙。」，日志同时出现 voice/say 两条，且没有触发 SAPI。
-- 语音独立启动：以前只有开始自动循环才启动 F8/字幕；现在保存设置时只要 `voiceEnabled` 或 `overlayEnabled` 为真就会启动，插件加载时也会恢复。实测 `running:false`、`voiceEnabled:true` 时 `voice.running:true`，不必先开自动操作。`overlayEnabled` 默认改为 false。测试 18/18。
+- 语音独立启动：以前只有开始自动循环才启动 F8/字幕；现在保存设置时只要 `voiceEnabled` 或 `overlayEnabled` 为真就会启动，插件加载时也会恢复。实测 `running:false`、`voiceEnabled:true` 时 `voice.running:true`，不必先开自动操作。`overlayEnabled` 默认改为 false。测试 19/19。
 - 文字对 Foxy 说 UI：在“语音与悬浮字幕”里直接输入文字发送，回复显示在输入框下方，同时写入实时日志。无 API Key 时会返回“我听到了：…”，用于验证上下文/UI 链路；实际模型回复需要填视觉 API Key。
 - 游戏插件自己的 STT 链路已用 16 kHz 单声道 WAV 验证：`GameVoice.transcribe()` → `scripts/stt.py` → SenseVoice 输出 `你好，我是foxy。今天我们一起打游戏吧。`。这不是麦克风实录，PTT 录音仍需真实按键验证。
 - 后台输入：`SendMessage` 对原生 WinForms 测试窗实测成功（`D` 使玩家 x+1），且不抢前台；后台鼠标也实测成功：`0.5,0.5` 点击被窗口记录为 `click:212,130`、`clicks:1`。Edge 会忽略合成消息，真实游戏兼容性必须逐个测。
@@ -160,4 +160,5 @@ test/           Node 内置测试
 ## License
 
 MIT
+
 

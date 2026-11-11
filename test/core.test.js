@@ -4,7 +4,7 @@ import { normalizeSettings, parseRegion, redact, DEFAULT_PRESET_ID } from '../li
 import { keyToVk, normalizeAction } from '../lib/actions.js'
 import { parseDecision } from '../lib/vision.js'
 import { nextMove } from '../lib/policy.js'
-import { actionToTestGame, describeMemoryState, describeProcessMemory } from '../lib/memory.js'
+import { actionToTestGame, describeMemoryState, describeProcessMemory, writeProcessMemory } from '../lib/memory.js'
 import { mapRegionPoint } from '../lib/capture.js'
 import { parseDshowDevices, parseMeanVolume } from '../lib/voice.js'
 import { parsePersonaYaml, withPersona } from '../lib/persona.js'
@@ -143,6 +143,13 @@ test('test game moves, blocks and wins', () => {
   const bumped = step(blocked, 'right')
   assert.equal(bumped.player.x, 0)
   assert.equal(bumped.last, 'bump-obstacle')
+})
+
+test('process memory write requires process source', async () => {
+  await assert.rejects(
+    writeProcessMemory({ memorySource: 'none', memoryWriteEnabled: true }, '1'),
+    /memorySource must be process/,
+  )
 })
 
 test('memory adapters translate key actions and describe state', () => {
