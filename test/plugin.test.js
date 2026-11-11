@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { apply, internals } from '../lib/index.js'
 
 function mount() {
@@ -54,4 +57,30 @@ test('capture summaries drop base64 payload', () => {
   const summary = internals.summarizeCapture({ ok: true, base64: 'abc', width: 10, height: 20 })
   assert.equal(summary.base64, undefined)
   assert.equal(summary.width, 10)
+})
+
+test('explicit empty visionApiKey clears the saved key', async () => {
+  const oldHome = process.env.DSH_HOME
+  const home = await mkdtemp(join(tmpdir(), 'foxy-game-test-'))
+  process.env.DSH_HOME = home
+  try {
+    const { routes } = mount()
+    const route = routes.get('/api/dsh-foxy-game/settings')
+    const save = (body) => route.fetch(new Request('http://local/settings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }))
+    let response = await save({ visionApiKey: 'secret' })
+    let body = await response.json()
+    assert.equal(body.settings.visionApiKeySet, true)
+
+    response = await save({ visionApiKey: '' })
+    body = await response.json()
+    assert.ok(!body.settings.visionApiKeySet)
+  } finally {
+    if (oldHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = oldHome
+    await rm(home, { recursive: true, force: true }).catch(() => {})
+  }
 })
