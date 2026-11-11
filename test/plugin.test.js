@@ -33,6 +33,7 @@ test('plugin registers the expected routes and status shape', async () => {
     '/api/dsh-foxy-game/speak',
     '/api/dsh-foxy-game/say',
     '/api/dsh-foxy-game/audio/devices',
+    '/api/dsh-foxy-game/memory/write',
   ]) assert.ok(routes.has(path), `missing ${path}`)
 
   const status = await routes.get('/api/dsh-foxy-game/status').fetch({ method: 'GET' })
@@ -56,9 +57,29 @@ test('settings route returns presets and never leaks the key', async () => {
   const body = await response.json()
   assert.equal(body.ok, true)
   assert.equal(body.settings.visionApiKey, '')
+  assert.equal(body.settings.memoryWriteEnabled, false)
   assert.ok(Array.isArray(body.presets))
   assert.ok(body.presets.every((item) => item.id && item.file))
   assert.equal(body.defaultPreset, 'foxy3')
+})
+
+test('memory write route is blocked by default', async () => {
+  const oldHome = process.env.DSH_HOME
+  const home = await mkdtemp(join(tmpdir(), 'foxy-game-write-test-'))
+  process.env.DSH_HOME = home
+  try {
+    const { routes } = mount()
+    const response = await routes.get('/api/dsh-foxy-game/memory/write').fetch(new Request('http://local/write', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ value: '1' }),
+    }))
+    assert.equal(response.status, 403)
+  } finally {
+    if (oldHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = oldHome
+    await rm(home, { recursive: true, force: true }).catch(() => {})
+  }
 })
 
 test('capture summaries drop base64 payload', () => {

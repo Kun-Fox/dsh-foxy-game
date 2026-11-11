@@ -5,7 +5,9 @@ param(
   [string]$Address = '',
   [string]$Offset = '',
   [string]$PointerOffsets = '',
-  [string]$Type = 'int32'
+  [string]$Type = 'int32',
+  [string]$WriteValue = '',
+  [switch]$Write
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,11 +67,14 @@ public static class FoxyMemoryReader {
   [DllImport("kernel32.dll", SetLastError = true)]
   public static extern bool ReadProcessMemory(IntPtr process, IntPtr address, byte[] buffer, int size, out IntPtr read);
   [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern bool WriteProcessMemory(IntPtr process, IntPtr address, byte[] buffer, int size, out IntPtr written);
+  [DllImport("kernel32.dll", SetLastError = true)]
   public static extern bool CloseHandle(IntPtr handle);
 }
 "@
 
-$handle = [FoxyMemoryReader]::OpenProcess(0x0010, $false, $proc.Id)
+$access = if ($Write) { 0x0038 } else { 0x0010 }
+$handle = [FoxyMemoryReader]::OpenProcess($access, $false, $proc.Id)
 if ($handle -eq [IntPtr]::Zero) { throw "OpenProcess failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
 
 try {
@@ -99,6 +104,33 @@ try {
     'float' { $value = [BitConverter]::ToSingle($buffer, 0) }
     'double' { $value = [BitConverter]::ToDouble($buffer, 0) }
   }
+  $oldValue = $value
+  $written = $false
+  if ($Write) {
+    if (-not $PSBoundParameters.ContainsKey('WriteValue')) { throw 'writeValue is required when writing memory' }
+    $bytes = switch ($Type) {
+      'int32' { [BitConverter]::GetBytes([int32]$WriteValue) }
+      'uint32' { [BitConverter]::GetBytes([uint32]$WriteValue) }
+      'int64' { [BitConverter]::GetBytes([int64]$WriteValue) }
+      'float' { [BitConverter]::GetBytes([single]::Parse($WriteValue, [Globalization.CultureInfo]::InvariantCulture)) }
+      'double' { [BitConverter]::GetBytes([double]::Parse($WriteValue, [Globalization.CultureInfo]::InvariantCulture)) }
+    }
+    $wrote = [IntPtr]::Zero
+    if (-not [FoxyMemoryReader]::WriteProcessMemory($handle, [IntPtr]$target, $bytes, $bytes.Length, [ref]$wrote)) {
+      throw "WriteProcessMemory failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+    if (-not [FoxyMemoryReader]::ReadProcessMemory($handle, [IntPtr]$target, $buffer, $size, [ref]$read)) {
+      throw "ReadProcessMemory after write failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+    switch ($Type) {
+      'int32' { $value = [BitConverter]::ToInt32($buffer, 0) }
+      'uint32' { $value = [BitConverter]::ToUInt32($buffer, 0) }
+      'int64' { $value = [BitConverter]::ToInt64($buffer, 0) }
+      'float' { $value = [BitConverter]::ToSingle($buffer, 0) }
+      'double' { $value = [BitConverter]::ToDouble($buffer, 0) }
+    }
+    $written = $true
+  }
   [pscustomobject]@{
     ok = $true
     pid = $proc.Id
@@ -109,6 +141,8 @@ try {
     pointerOffsets = $PointerOffsets
     type = $Type
     value = $value
+    oldValue = $oldValue
+    written = $written
   } | ConvertTo-Json -Compress
 }
 finally {
