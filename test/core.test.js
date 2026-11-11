@@ -6,6 +6,7 @@ import { parseDecision } from '../lib/vision.js'
 import { nextMove } from '../lib/policy.js'
 import { actionToTestGame, describeMemoryState, describeProcessMemory } from '../lib/memory.js'
 import { mapRegionPoint } from '../lib/capture.js'
+import { parseDshowDevices } from '../lib/voice.js'
 import { createGame, serialize, step } from '../test-game/game.js'
 
 test('settings normalize clamps numbers and keeps safe defaults', () => {
@@ -28,8 +29,17 @@ test('settings normalize clamps numbers and keeps safe defaults', () => {
   assert.equal(value.personaPresetId, DEFAULT_PRESET_ID)
 })
 
-test('settings redact hides the API key', () => {
-  const value = redact({ visionApiKey: 'secret', visionModel: 'x' })
+test('dshow parser keeps audio devices only', () => {
+  const text = [
+    '[dshow @ 1] "Integrated Camera" (video)',
+    '[dshow @ 1] "麦克风 (USB Audio)" (audio)',
+    '[dshow @ 1]   Alternative name "@device_cm_x"',
+    '[dshow @ 1] "VoiceMeeter Output" (audio)',
+  ].join('\n')
+  assert.deepEqual(parseDshowDevices(text), ['麦克风 (USB Audio)', 'VoiceMeeter Output'])
+})
+
+test('settings redact hides the API key', () => {  const value = redact({ visionApiKey: 'secret', visionModel: 'x' })
   assert.equal(value.visionApiKey, '')
   assert.equal(value.visionApiKeySet, true)
 })

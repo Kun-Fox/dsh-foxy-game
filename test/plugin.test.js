@@ -31,6 +31,7 @@ test('plugin registers the expected routes and status shape', async () => {
     '/api/dsh-foxy-game/start',
     '/api/dsh-foxy-game/stop',
     '/api/dsh-foxy-game/speak',
+    '/api/dsh-foxy-game/audio/devices',
   ]) assert.ok(routes.has(path), `missing ${path}`)
 
   const status = await routes.get('/api/dsh-foxy-game/status').fetch({ method: 'GET' })
@@ -40,6 +41,12 @@ test('plugin registers the expected routes and status shape', async () => {
   assert.equal(body.name, 'dsh-foxy-game')
   assert.ok(body.settings && typeof body.settings.enabled === 'boolean')
   assert.ok(Array.isArray(body.logs))
+
+  const audio = await routes.get('/api/dsh-foxy-game/audio/devices').fetch({ method: 'GET' })
+  assert.equal(audio.status, 200)
+  const devices = await audio.json()
+  assert.equal(devices.ok, true)
+  assert.ok(Array.isArray(devices.devices))
 })
 
 test('settings route returns presets and never leaks the key', async () => {
