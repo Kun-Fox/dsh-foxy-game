@@ -36,7 +36,13 @@ if ($ProcessId -gt 0) {
 } else {
   if (-not $ProcessName) { throw 'process or processId is required' }
   $name = $ProcessName -replace '\.exe$', ''
-  $proc = Get-Process -Name $name -ErrorAction Stop | Select-Object -First 1
+  $candidates = @(Get-Process -Name $name -ErrorAction Stop)
+  if ($candidates.Count -eq 0) { throw "process not found: $name" }
+  if ($candidates.Count -gt 1) {
+    $ids = ($candidates | ForEach-Object { $_.Id }) -join ', '
+    throw "multiple processes named '$name' ($ids); specify an exact processId"
+  }
+  $proc = $candidates[0]
 }
 
 $module = $null
@@ -118,6 +124,9 @@ try {
     $wrote = [IntPtr]::Zero
     if (-not [FoxyMemoryReader]::WriteProcessMemory($handle, [IntPtr]$target, $bytes, $bytes.Length, [ref]$wrote)) {
       throw "WriteProcessMemory failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+    if ($wrote.ToInt64() -ne $bytes.Length) {
+      throw "short write at 0x$($target.ToString('X')): $($wrote.ToInt64()) of $($bytes.Length) bytes"
     }
     if (-not [FoxyMemoryReader]::ReadProcessMemory($handle, [IntPtr]$target, $buffer, $size, [ref]$read)) {
       throw "ReadProcessMemory after write failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
