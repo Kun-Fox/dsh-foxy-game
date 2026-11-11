@@ -4,7 +4,7 @@
 
 > 当前是 `0.1.14` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
-### 开发进度（2026-11-12 05:12）
+### 开发进度（2026-11-12 05:18）
 
 - 已跑通 DSH 侧栏、窗口枚举、窗口截图、SHA-256 跳帧、视觉模型 JSON 决策、后台动作接口、自测游戏 HTTP 闭环。
 - 变化区域裁剪（实验，默认关闭）：ffmpeg 对比上一帧，只把变化块送视觉模型；原生测试窗实测 440×300（5.4 KB）→ 112×104（1.5 KB），鼠标坐标会按裁剪区域自动映射回整窗。
@@ -22,6 +22,7 @@
 - 语音录音停止改为给 ffmpeg 发 `q` 正常收尾，避免直接 kill 留下损坏 WAV；真实麦克风录音仍待验证。
 - 麦克风设备改为从 `ffmpeg -list_devices` 枚举，UI 下拉选择；本机实测列出 UGREEN、Steam Streaming、VoiceMeeter、AMD 阵列、MEGATRON 五个音频输入，避免手填 dshow 名称。
 - 角色预设接入：UI 可从 `~/.dsh/foxy/presets` 选择 `personaPresetId`，视觉决策与按住说话的回复都会读取该 YAML 的 `persona` 块；实际读取 `foxy3` 得到 3,966 字人设，视觉提示仍以“只输出 JSON”收尾。
+- 游戏插件自己的 STT 链路已用 16 kHz 单声道 WAV 验证：`GameVoice.transcribe()` → `scripts/stt.py` → SenseVoice 输出 `你好，我是foxy。今天我们一起打游戏吧。`。这不是麦克风实录，PTT 录音仍需真实按键验证。
 - 后台输入：`SendMessage` 对原生 WinForms 测试窗实测成功（`D` 使玩家 x+1），且不抢前台；Edge 会忽略合成消息，真实游戏兼容性必须逐个测。
 - 完整屏幕闭环：原生 WinForms 测试窗 `hwnd 122882056` 截图 640×436（8.5 KB）→ mock 视觉返回 `{type:'key',key:'d'}` → 后台 `SendMessage`，玩家 x 从 0 变为 1，前台未切换。
 
