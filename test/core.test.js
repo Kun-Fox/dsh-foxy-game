@@ -5,6 +5,7 @@ import { keyToVk, normalizeAction } from '../lib/actions.js'
 import { parseDecision } from '../lib/vision.js'
 import { nextMove } from '../lib/policy.js'
 import { actionToTestGame, describeMemoryState } from '../lib/memory.js'
+import { mapRegionPoint } from '../lib/capture.js'
 import { createGame, serialize, step } from '../test-game/game.js'
 
 test('settings normalize clamps numbers and keeps safe defaults', () => {
@@ -35,6 +36,13 @@ test('region parser accepts comma and x forms', () => {
   assert.deepEqual(parseRegion('10,20,300,400'), { x: 10, y: 20, w: 300, h: 400 })
   assert.deepEqual(parseRegion('0x80x1280x720'), { x: 0, y: 80, w: 1280, h: 720 })
   assert.equal(parseRegion('bad'), null)
+})
+
+test('crop-relative mouse coordinates map back to the full frame', () => {
+  const region = { x: 100, y: 50, w: 200, h: 100, totalWidth: 1000, totalHeight: 500 }
+  assert.deepEqual(mapRegionPoint(region, 0.5, 0.5), { x: 0.2, y: 0.2 })
+  assert.deepEqual(mapRegionPoint(region, 0, 0), { x: 0.1, y: 0.1 })
+  assert.deepEqual(mapRegionPoint(null, 0.3, 0.4), { x: 0.3, y: 0.4 })
 })
 
 test('key mapping and action validation', () => {
