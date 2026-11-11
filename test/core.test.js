@@ -7,6 +7,7 @@ import { nextMove } from '../lib/policy.js'
 import { actionToTestGame, describeMemoryState, describeProcessMemory } from '../lib/memory.js'
 import { mapRegionPoint } from '../lib/capture.js'
 import { parseDshowDevices } from '../lib/voice.js'
+import { parsePersonaYaml, withPersona } from '../lib/persona.js'
 import { createGame, serialize, step } from '../test-game/game.js'
 
 test('settings normalize clamps numbers and keeps safe defaults', () => {
@@ -27,6 +28,15 @@ test('settings normalize clamps numbers and keeps safe defaults', () => {
   assert.equal(value.enabled, true)
   assert.equal(value.actionMode, 'foreground')
   assert.equal(value.personaPresetId, DEFAULT_PRESET_ID)
+})
+
+test('persona yaml parser reads block and inline forms', () => {
+  const block = parsePersonaYaml('id: foxy3\npersona: |\n  你是 foxy。\n  说话带个喵。\nname: x\n')
+  assert.equal(block, '你是 foxy。\n说话带个喵。')
+  assert.equal(parsePersonaYaml('persona: 你是测试角色。\n'), '你是测试角色。')
+  const prompt = withPersona('只输出 JSON', block)
+  assert.ok(prompt.startsWith('只输出 JSON'))
+  assert.ok(prompt.includes('说话带个喵。'))
 })
 
 test('dshow parser keeps audio devices only', () => {
