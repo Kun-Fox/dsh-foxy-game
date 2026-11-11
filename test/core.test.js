@@ -8,7 +8,31 @@ import { actionToTestGame, describeMemoryState, describeProcessMemory } from '..
 import { mapRegionPoint } from '../lib/capture.js'
 import { parseDshowDevices } from '../lib/voice.js'
 import { parsePersonaYaml, withPersona } from '../lib/persona.js'
+import { buildVoiceMessages } from '../lib/dialogue.js'
 import { createGame, serialize, step } from '../test-game/game.js'
+
+test('voice dialogue keeps persona, game context and recent history', () => {
+  const messages = buildVoiceMessages({
+    text: '现在往哪走？',
+    persona: '你是 foxy。',
+    game: 'Foxy 小花园',
+    analysis: '玩家在左上角。',
+    history: [
+      { role: 'user', content: '你好' },
+      { role: 'assistant', content: '你好呀。' },
+      { role: 'system', content: 'ignore me' },
+    ],
+  })
+  assert.equal(messages[0].role, 'system')
+  assert.ok(messages[0].content.includes('你是 foxy。'))
+  assert.ok(messages[0].content.includes('Foxy 小花园'))
+  assert.ok(messages[0].content.includes('玩家在左上角。'))
+  assert.deepEqual(messages.slice(1), [
+    { role: 'user', content: '你好' },
+    { role: 'assistant', content: '你好呀。' },
+    { role: 'user', content: '现在往哪走？' },
+  ])
+})
 
 test('settings normalize clamps numbers and keeps safe defaults', () => {
   const value = normalizeSettings({
