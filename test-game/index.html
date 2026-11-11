@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foxy Game — 小花园</title>
+<style>
+  :root { color-scheme: dark; --bg:#111315; --panel:#1b1e22; --line:#31363d; --text:#eceff4; --muted:#9aa3ad; --accent:#e49a78; --good:#76c893; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(1000px 600px at 50% -10%, #2a2420, var(--bg)); color:var(--text); font:14px/1.5 "Microsoft YaHei UI", system-ui, sans-serif; }
+  main { width:min(880px, 94vw); padding:28px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg, #1d2024, #17191c); box-shadow:0 24px 80px #0008; }
+  header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+  h1 { margin:0 0 4px; font-size:22px; letter-spacing:-.02em; }
+  p { margin:0; color:var(--muted); }
+  .badge { padding:4px 9px; border:1px solid var(--line); border-radius:999px; color:var(--muted); font-size:11px; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:22px; margin-top:22px; }
+  .board { display:grid; grid-template-columns:repeat(var(--n), 1fr); gap:6px; aspect-ratio:1; padding:10px; border:1px solid var(--line); border-radius:14px; background:#101214; }
+  .cell { display:grid; place-items:center; border-radius:7px; background:#1d2126; font-size:clamp(18px,4vw,30px); transition:background .15s, transform .15s; }
+  .cell.wall { background:#2b3037; color:#59616b; }
+  .cell.goal { background:#23352c; color:var(--good); }
+  .cell.player { background:var(--accent); color:#21140e; transform:scale(1.04); }
+  .side { display:flex; flex-direction:column; gap:12px; }
+  .stat { display:flex; justify-content:space-between; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#15181b; }
+  .stat span { color:var(--muted); }
+  .stat b { font-variant-numeric:tabular-nums; }
+  .keys { display:grid; grid-template-columns:repeat(3, 44px); gap:6px; justify-content:center; margin-top:4px; }
+  button { border:1px solid var(--line); border-radius:9px; background:#20252b; color:var(--text); padding:9px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#21140e; border-color:var(--accent); font-weight:600; }
+  .help { color:var(--muted); font-size:12px; line-height:1.7; }
+  .log { margin-top:14px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; color:var(--muted); min-height:42px; font-family:Consolas, monospace; font-size:12px; white-space:pre-wrap; }
+  @media (max-width: 720px) { .layout { grid-template-columns:1fr; } .board { max-width:520px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Foxy 的小花园</h1>
+      <p>把 @ 走到 *，避开 #。给 Foxy 的屏幕感知/记忆适配器做测试。</p>
+    </div>
+    <span class="badge" id="status">连接中</span>
+  </header>
+  <div class="layout">
+    <div class="board" id="board" aria-label="game board"></div>
+    <aside class="side">
+      <div class="stat"><span>步数</span><b id="steps">0</b></div>
+      <div class="stat"><span>得分</span><b id="score">0</b></div>
+      <div class="stat"><span>最近动作</span><b id="last">—</b></div>
+      <div class="keys">
+        <span></span><button data-action="up">W</button><span></span>
+        <button data-action="left">A</button><button data-action="down">S</button><button data-action="right">D</button>
+      </div>
+      <button class="primary" data-action="reset">重新开始</button>
+      <p class="help">键盘 WASD / 方向键。这个页面由 `test-game/server.mjs` 提供；AI 也可以通过 `POST /api/action` 操作。</p>
+      <div class="log" id="log">等待连接…</div>
+    </aside>
+  </div>
+</main>
+<script>
+let state = null
+const board = document.getElementById('board')
+const statusEl = document.getElementById('status')
+
+function draw(data) {
+  state = data
+  statusEl.textContent = data.won ? '完成' : '进行中'
+  statusEl.style.color = data.won ? 'var(--good)' : ''
+  board.style.setProperty('--n', data.size)
+  board.innerHTML = ''
+  const blocked = new Set(data.blocked)
+  for (let y = 0; y < data.size; y += 1) {
+    for (let x = 0; x < data.size; x += 1) {
+      const cell = document.createElement('div')
+      cell.className = 'cell'
+      cell.dataset.x = x
+      cell.dataset.y = y
+      if (blocked.has(`${x},${y}`)) { cell.classList.add('wall'); cell.textContent = '#' }
+      else if (data.goal.x === x && data.goal.y === y) { cell.classList.add('goal'); cell.textContent = '*' }
+      if (data.player.x === x && data.player.y === y) { cell.classList.add('player'); cell.textContent = '@' }
+      board.appendChild(cell)
+    }
+  }
+  document.getElementById('steps').textContent = data.steps
+  document.getElementById('score').textContent = data.score
+  document.getElementById('last').textContent = data.last || '—'
+  document.getElementById('log').textContent = data.grid + '\n' + (data.won ? '你赢了。' : 'Foxy 还在找路。')
+}
+
+async function refresh() {
+  const response = await fetch('/api/state')
+  draw(await response.json())
+}
+
+async function act(action) {
+  const response = await fetch('/api/action', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action }) })
+  draw(await response.json())
+}
+
+document.addEventListener('keydown', (event) => {
+  const map = { w: 'up', a: 'left', s: 'down', d: 'right', ArrowUp: 'up', ArrowLeft: 'left', ArrowDown: 'down', ArrowRight: 'right' }
+  const action = map[event.key]
+  if (action) { event.preventDefault(); void act(action) }
+})
+document.addEventListener('click', (event) => {
+  const action = event.target?.dataset?.action
+  if (action) void act(action)
+})
+refresh().catch((error) => { statusEl.textContent = '连接失败'; document.getElementById('log').textContent = String(error) })
+setInterval(() => { if (state && !state.won) refresh().catch(() => {}) }, 1200)
+</script>
+</body>
+</html>

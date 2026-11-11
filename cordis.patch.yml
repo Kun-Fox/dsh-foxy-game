@@ -1,0 +1,21 @@
+# dsh-foxy-game bundle patch.
+# Install with:
+#   dsh plugin --profile desktop add file:D:\...\dsh-foxy-game
+#
+# Runtime settings are written to ~/.dsh/foxy-game/settings.json by the
+# sidebar. These values are only first-run defaults.
+- insert:
+    - id: foxy-game
+      name: dsh-foxy-game
+      config:
+        enabled: false
+        mode: screen
+        windowHwnd: 0
+        captureIntervalMs: 1500
+        skipUnchanged: true
+        maxWidth: 1280
+        jpegQuality: 65
+        actionMode: background
+        autoPlay: false
+        voiceEnabled: false
+        overlayEnabled: true

@@ -16,6 +16,7 @@
     "lib",
     "scripts",
     "test-game",
+    "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
@@ -37,12 +38,19 @@
     "url": "https://github.com/Kun-Fox/dsh-foxy-game/issues"
   },
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins",
         "@deepseek-ai/dsh-client-ui-slots"
       ]
-    }
+    },
+    "manifestVersion": 1
   },
   "keywords": [
     "dsh",
