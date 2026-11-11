@@ -4,7 +4,7 @@ import { normalizeSettings, parseRegion, redact, DEFAULT_PRESET_ID } from '../li
 import { keyToVk, normalizeAction } from '../lib/actions.js'
 import { parseDecision } from '../lib/vision.js'
 import { nextMove } from '../lib/policy.js'
-import { actionToTestGame, describeMemoryState } from '../lib/memory.js'
+import { actionToTestGame, describeMemoryState, describeProcessMemory } from '../lib/memory.js'
 import { mapRegionPoint } from '../lib/capture.js'
 import { createGame, serialize, step } from '../test-game/game.js'
 
@@ -99,4 +99,7 @@ test('memory adapters translate key actions and describe state', () => {
   const text = describeMemoryState({ grid: '@..', player: { x: 0, y: 0 }, goal: { x: 2, y: 0 }, steps: 1, won: false })
   assert.match(text, /player=\(0,0\)/)
   assert.match(text, /steps=1/)
+  const processText = describeProcessMemory({ process: 'game', pid: 42, module: 'game.exe', base: '0x1000', address: '0x1010', type: 'int32', value: 7 })
+  assert.match(processText, /pid=42/)
+  assert.match(processText, /value=7/)
 })

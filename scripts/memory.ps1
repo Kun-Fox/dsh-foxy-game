@@ -1,0 +1,98 @@
+param(
+  [string]$ProcessName = '',
+  [int]$ProcessId = 0,
+  [string]$ModuleName = '',
+  [string]$Address = '',
+  [string]$Offset = '',
+  [string]$Type = 'int32'
+)
+
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+function Parse-Hex([string]$Value) {
+  $text = $Value.Trim()
+  if (-not $text) { return [int64]0 }
+  if ($text -match '^0[xX]') { $text = $text.Substring(2) }
+  return [Convert]::ToInt64($text, 16)
+}
+
+function Get-MemorySize([string]$Kind) {
+  switch ($Kind) {
+    'int32' { return 4 }
+    'uint32' { return 4 }
+    'int64' { return 8 }
+    'float' { return 4 }
+    'double' { return 8 }
+    default { throw "unsupported memory type: $Kind" }
+  }
+}
+
+if ($ProcessId -gt 0) {
+  $proc = Get-Process -Id $ProcessId -ErrorAction Stop
+} else {
+  if (-not $ProcessName) { throw 'process or processId is required' }
+  $name = $ProcessName -replace '\.exe$', ''
+  $proc = Get-Process -Name $name -ErrorAction Stop | Select-Object -First 1
+}
+
+$module = $null
+if ($ModuleName) {
+  $module = $proc.Modules | Where-Object { $_.ModuleName -eq $ModuleName -or $_.FileName -like "*\$ModuleName" } | Select-Object -First 1
+  if (-not $module) { throw "module not found: $ModuleName" }
+} else {
+  $module = $proc.MainModule
+}
+$base = [int64]$module.BaseAddress
+
+if ($Address) {
+  $target = Parse-Hex $Address
+} else {
+  $target = $base + (Parse-Hex $Offset)
+}
+
+$size = Get-MemorySize $Type
+$buffer = New-Object byte[] $size
+$read = [IntPtr]::Zero
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class FoxyMemoryReader {
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern IntPtr OpenProcess(int access, bool inherit, int pid);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern bool ReadProcessMemory(IntPtr process, IntPtr address, byte[] buffer, int size, out IntPtr read);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern bool CloseHandle(IntPtr handle);
+}
+"@
+
+$handle = [FoxyMemoryReader]::OpenProcess(0x0010, $false, $proc.Id)
+if ($handle -eq [IntPtr]::Zero) { throw "OpenProcess failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+
+try {
+  if (-not [FoxyMemoryReader]::ReadProcessMemory($handle, [IntPtr]$target, $buffer, $size, [ref]$read)) {
+    throw "ReadProcessMemory failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+  }
+  switch ($Type) {
+    'int32' { $value = [BitConverter]::ToInt32($buffer, 0) }
+    'uint32' { $value = [BitConverter]::ToUInt32($buffer, 0) }
+    'int64' { $value = [BitConverter]::ToInt64($buffer, 0) }
+    'float' { $value = [BitConverter]::ToSingle($buffer, 0) }
+    'double' { $value = [BitConverter]::ToDouble($buffer, 0) }
+  }
+  [pscustomobject]@{
+    ok = $true
+    pid = $proc.Id
+    process = $proc.ProcessName
+    module = $module.ModuleName
+    base = ('0x{0:X}' -f $base)
+    address = ('0x{0:X}' -f $target)
+    type = $Type
+    value = $value
+  } | ConvertTo-Json -Compress
+}
+finally {
+  [void][FoxyMemoryReader]::CloseHandle($handle)
+}
