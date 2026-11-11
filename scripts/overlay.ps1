@@ -15,7 +15,7 @@ $form.ShowInTaskbar = $false
 $form.TopMost = $true
 $form.StartPosition = [System.Windows.Forms.FormStartPosition]::Manual
 $form.BackColor = [System.Drawing.Color]::FromArgb(28, 28, 30)
-$form.Opacity = 0.88
+$form.Opacity = 0
 $form.Width = $MaxWidth
 $form.Height = 120
 
@@ -29,31 +29,31 @@ $label.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', $FontSize, [S
 $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $form.Controls.Add($label)
 
-$script:lastText = ''
-$script:lastChange = [DateTime]::UtcNow
-$timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 300
-$timer.Add_Tick({
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+$form.Left = [int](($screen.Width - $form.Width) / 2 + $screen.Left)
+$form.Top = [int]($screen.Bottom - $form.Height - $BottomMargin)
+$form.Show()
+
+$lastText = ''
+$lastChange = [DateTime]::UtcNow
+while (-not $form.IsDisposed) {
+  [System.Windows.Forms.Application]::DoEvents()
   try {
     $text = if (Test-Path -LiteralPath $TextFile) { Get-Content -Raw -LiteralPath $TextFile } else { '' }
     $text = ($text -replace '\s+$', '').Trim()
-    if ($text -ne $script:lastText) {
-      $script:lastText = $text
-      $script:lastChange = [DateTime]::UtcNow
+    if ($text -ne $lastText) {
+      $lastText = $text
+      $lastChange = [DateTime]::UtcNow
       $label.Text = $text
       $form.Height = [Math]::Max(76, [Math]::Min(260, 58 + ([Math]::Ceiling($text.Length / 34) * ($FontSize + 8))))
-      $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-      $form.Left = [int](($screen.Width - $form.Width) / 2 + $screen.Left)
       $form.Top = [int]($screen.Bottom - $form.Height - $BottomMargin)
-      $form.Visible = $text.Length -gt 0
+      $form.Opacity = if ($text.Length -gt 0) { 0.88 } else { 0 }
     }
-    if ($text.Length -gt 0 -and ([DateTime]::UtcNow - $script:lastChange).TotalSeconds -gt 14) {
+    if ($text.Length -gt 0 -and ([DateTime]::UtcNow - $lastChange).TotalSeconds -gt 14) {
       $label.Text = ''
-      $script:lastText = ''
-      $form.Visible = $false
+      $lastText = ''
+      $form.Opacity = 0
     }
   } catch {}
-})
-$timer.Start()
-$form.Add_Shown({ $form.Visible = $false })
-[System.Windows.Forms.Application]::Run($form)
+  Start-Sleep -Milliseconds 200
+}

@@ -43,7 +43,7 @@
 - `vision.js`：OpenAI 兼容的视觉请求，严格 JSON 输出（`analysis/action/say/confidence`）；解析失败会保留原文并报错。
 - `actions.js` + `input.ps1`：键盘按下/抬起/点按、鼠标移动/点击、文本；支持 `background`（SendMessage）和 `foreground`（SendInput）。
 - `test-game/`：一个本地小游戏 + HTTP 状态/动作 API，用来在没有视觉模型时验证“观测→决策→动作→记忆”闭环。
-- 语音/悬浮字幕：`voice.js`、`overlay.ps1`、`hotkey.ps1` 的本地回路骨架（默认关闭，需要麦克风设备名）。
+- 语音/悬浮字幕：`voice.js`、`overlay.ps1`、`hotkey.ps1` 的本地回路骨架（默认关闭，需要麦克风设备名）。悬浮字幕已实测：原生长文本会自动扩高到 760×208，并保持置顶。
 - `scripts/stt.py`：本地 SenseVoice 转写后备；TTS 优先 DSH Speech，回退 Windows SAPI。
 
 ## 调研结论
@@ -128,7 +128,7 @@ test/           Node 内置测试
 - [ ] 变化区域目前只做整图哈希；块级 diff / 只发变化区域还没做。
 - [ ] 视觉模型的动作坐标是归一化坐标，未做窗口 DPI 校正；高 DPI 需要实测。
 - [ ] 内存适配器目前只有自测 HTTP 源，**没有**真实进程内存读取或写入。
-- [ ] 语音热键/悬浮窗需要在真实 Windows 会话中验证；当前默认关闭。
+- [ ] 悬浮字幕已单独验证；语音热键/麦克风录音需要在真实 Windows 会话中验证，当前默认关闭。
 - [x] 自动循环支持 `F12` 全局紧急停止（`scripts/stop-hotkey.ps1`）；默认仍不自动启动。
 - [ ] 没有做反作弊检测/规避；这是有意为之，不提供绕过能力。
 
