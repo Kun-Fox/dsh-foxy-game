@@ -2,7 +2,7 @@
 
 让 Foxy 陪你玩游戏。不是“让模型看一张截图然后祈祷它能操作”，而是把**感知、决策、操作、交流**拆成可替换的适配器，先跑通一个可控的小闭环，再逐个游戏加适配。
 
-> 当前是 `0.1.18` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
+> 当前是 `0.1.19` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
 ### 开发进度（2026-11-12 05:18）
 
@@ -25,7 +25,8 @@
 - 语音对话上下文：按住说话的回复会带上当前游戏窗口标题、上一轮画面分析、最近 6 轮对话，避免 Foxy 每句话都从零开始；回复仍限制两句话并走字幕/TTS。
 - PTT 静音门限：录音结束后先用 ffmpeg `volumedetect` 测平均音量，低于 `pttMinVolumeDb`（默认 -45 dB）直接丢弃，避免把环境噪声转成“嗯”。用 1 秒虚拟麦克风录音（31,662 B，-91 dB）和 SAPI 语音 WAV（-26.3 dB）验证了门限两侧。
 - PTT 空录音保护：注入 F8 短暂按下 120 ms 时 ffmpeg 会留下 0 字节 WAV；现在录制时长 <250 ms 或文件 <1 KB 直接跳过，不再把 EOFError 抛到 STT。实测 120 ms 快速按一下不报错、不转写；按住 1.5 秒虚拟静音被 -91 dB 门限丢弃。
-- 文字对 Foxy 说：新增 `POST /api/dsh-foxy-game/say`，走与 PTT 相同的 `onVoiceTranscript` 流程（人设、当前窗口、上一轮画面、最近对话），并新增 `ttsProvider:'none'`（仅字幕）。用 mock LLM 实测返回「我在，先往右走，别撞墙。」，日志同时出现 voice/say 两条，且没有触发 SAPI。测试 17/17。
+- 文字对 Foxy 说：新增 `POST /api/dsh-foxy-game/say`，走与 PTT 相同的 `onVoiceTranscript` 流程（人设、当前窗口、上一轮画面、最近对话），并新增 `ttsProvider:'none'`（仅字幕）。用 mock LLM 实测返回「我在，先往右走，别撞墙。」，日志同时出现 voice/say 两条，且没有触发 SAPI。
+- 语音独立启动：以前只有开始自动循环才启动 F8/字幕；现在保存设置时只要 `voiceEnabled` 或 `overlayEnabled` 为真就会启动，插件加载时也会恢复。实测 `running:false`、`voiceEnabled:true` 时 `voice.running:true`，不必先开自动操作。`overlayEnabled` 默认改为 false。测试 17/17。
 - 游戏插件自己的 STT 链路已用 16 kHz 单声道 WAV 验证：`GameVoice.transcribe()` → `scripts/stt.py` → SenseVoice 输出 `你好，我是foxy。今天我们一起打游戏吧。`。这不是麦克风实录，PTT 录音仍需真实按键验证。
 - 后台输入：`SendMessage` 对原生 WinForms 测试窗实测成功（`D` 使玩家 x+1），且不抢前台；Edge 会忽略合成消息，真实游戏兼容性必须逐个测。
 - 完整屏幕闭环：原生 WinForms 测试窗 `hwnd 122882056` 截图 640×436（8.5 KB）→ mock 视觉返回 `{type:'key',key:'d'}` → 后台 `SendMessage`，玩家 x 从 0 变为 1，前台未切换。
