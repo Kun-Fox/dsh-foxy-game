@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$state = @{ x = 0; y = 0; last = ''; steps = 0 }
+$state = @{ x = 0; y = 0; last = ''; steps = 0; mouseX = -1; mouseY = -1; clicks = 0 }
 function Save-State {
   $state | ConvertTo-Json -Compress | Set-Content -LiteralPath $StateFile -Encoding utf8
 }
@@ -28,6 +28,17 @@ $form.Controls.Add($label)
 function Update-Label {
   $label.Text = "($($state.x), $($state.y))`r`nWASD / arrows`r`nlast: $($state.last)"
 }
+
+$form.Add_MouseDown({
+  param($sender, $event)
+  if ($event.Button -ne [System.Windows.Forms.MouseButtons]::Left) { return }
+  $state.mouseX = $event.X
+  $state.mouseY = $event.Y
+  $state.clicks += 1
+  $state.last = "click:$($event.X),$($event.Y)"
+  Save-State
+  Update-Label
+})
 
 $form.Add_KeyDown({
   param($sender, $event)
