@@ -2,7 +2,7 @@
 
 让 Foxy 陪你玩游戏。不是“让模型看一张截图然后祈祷它能操作”，而是把**感知、决策、操作、交流**拆成可替换的适配器，先跑通一个可控的小闭环，再逐个游戏加适配。
 
-> 当前是 `0.1.10` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
+> 当前是 `0.1.11` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
 ### 开发进度（2026-11-12 04:46）
 
@@ -14,7 +14,7 @@
 - 真实 DSH `foxy-test` profile：侧栏 `Foxy Game` 已出现，`/api/dsh-foxy-game/status` 返回 200。
 - 真实窗口截图：`captureWindow` 对系统设置窗口返回 640×379 JPEG（约 15 KB）；mock 视觉接口收到图片并返回决策。
 - 自测游戏 memory 闭环：观察 → BFS 决策 → HTTP 动作 → 状态更新，已验证。
-- 只读进程内存（实验）：`scripts/memory.ps1` 支持按 PID/进程名、模块基址+偏移或绝对地址读取 `int32/uint32/int64/float/double`；用测试进程验证读到 `424242`。只读，不写内存，也没有指针链扫描。
+- 只读进程内存（实验）：`scripts/memory.ps1` 支持按 PID/进程名、模块基址+偏移或绝对地址读取 `int32/uint32/int64/float/double`，并支持逗号分隔的指针链偏移；用测试进程验证“基址→指针→+0x10”读到 `424242`。只读，不写内存，也没有自动扫描。
 - 悬浮字幕可独立于语音运行：即使 `voiceEnabled:false`，只要 `overlayEnabled:true`，视觉模型的 `say` 也会显示在置顶字幕里，不强制开麦。已实测 overlay 进程启动、无热键进程。
 - 自动循环：能启动、按截图间隔跳帧、停止；画面未变化时只记 `skip` 日志。
 - `F12` 全局紧急停止：已用 `keybd_event` 注入 F12 实测，能写入停止标志；启动时自动拉起隐藏热键进程，停止时清理。
@@ -114,6 +114,7 @@ dsh plugin --profile desktop add file:D:\Documents\deepseek-harness\default-work
   "memoryModule": "",
   "memoryAddress": "",
   "memoryOffset": "",
+  "memoryPointerOffsets": "",   // 逗号分隔，如 0x10,0x20
   "memoryType": "int32",         // int32 | uint32 | int64 | float | double
   "voiceEnabled": false,
   "pttKey": "F8",
@@ -138,7 +139,7 @@ test/           Node 内置测试
 - [ ] 后台合成消息在 Edge 窗口实测无效（浏览器忽略）；原生 WinForms 测试窗用 `SendMessage` 已通过。真实游戏是否接受需逐个验证，不接受时只能回退前台 `SendInput` 或做 `AnchoredTouch`。
 - [x] 变化区域裁剪（实验，默认关闭）：ffmpeg diff 找 bbox，裁剪后只送变化块；鼠标坐标自动映射回整窗。只裁剪会丢失画面上下文，复杂游戏建议关闭或配合完整帧使用。
 - [ ] 视觉模型的动作坐标是归一化坐标，未做窗口 DPI 校正；高 DPI 需要实测。
-- [ ] 内存适配器目前支持只读单值（绝对地址或模块基址+偏移），没有指针链扫描、结构体/数组读取或写入。
+- [ ] 内存适配器目前支持只读单值（绝对地址或模块基址+偏移，可带指针链），没有结构体/数组读取或写入。
 - [x] 悬浮字幕已单独验证；按住说话热键已用 `keybd_event` 注入 F8 验证（按下写入 `ptt.down`、松开删除）。
 - [x] Windows SAPI 播报已用 `speak.ps1` 实测退出码 0。
 - [ ] 麦克风录音/STT 还需要真实麦克风端到端验证，当前默认关闭。

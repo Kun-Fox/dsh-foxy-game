@@ -4,6 +4,7 @@ param(
   [string]$ModuleName = '',
   [string]$Address = '',
   [string]$Offset = '',
+  [string]$PointerOffsets = '',
   [string]$Type = 'int32'
 )
 
@@ -72,6 +73,22 @@ $handle = [FoxyMemoryReader]::OpenProcess(0x0010, $false, $proc.Id)
 if ($handle -eq [IntPtr]::Zero) { throw "OpenProcess failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
 
 try {
+  $offsets = @()
+  if ($PointerOffsets) {
+    $offsets = $PointerOffsets.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+  }
+  if ($offsets.Count -gt 0) {
+    $pointerBuffer = New-Object byte[] 8
+    $pointerRead = [IntPtr]::Zero
+    foreach ($offset in $offsets) {
+      if (-not [FoxyMemoryReader]::ReadProcessMemory($handle, [IntPtr]$target, $pointerBuffer, 8, [ref]$pointerRead)) {
+        throw "ReadProcessMemory pointer failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+      }
+      $pointer = [BitConverter]::ToInt64($pointerBuffer, 0)
+      $target = $pointer + (Parse-Hex $offset)
+    }
+  }
+
   if (-not [FoxyMemoryReader]::ReadProcessMemory($handle, [IntPtr]$target, $buffer, $size, [ref]$read)) {
     throw "ReadProcessMemory failed at 0x$($target.ToString('X')): $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
   }
@@ -89,6 +106,7 @@ try {
     module = $module.ModuleName
     base = ('0x{0:X}' -f $base)
     address = ('0x{0:X}' -f $target)
+    pointerOffsets = $PointerOffsets
     type = $Type
     value = $value
   } | ConvertTo-Json -Compress

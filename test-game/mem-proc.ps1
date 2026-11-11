@@ -15,13 +15,16 @@ public static class FoxyMemoryTest {
 "@
 
 $address = [FoxyMemoryTest]::VirtualAlloc([IntPtr]::Zero, [UIntPtr]::new(4096), 0x3000, 0x04)
-if ($address -eq [IntPtr]::Zero) { throw 'VirtualAlloc failed' }
-[System.Runtime.InteropServices.Marshal]::WriteInt32($address, $Value)
+$target = [FoxyMemoryTest]::VirtualAlloc([IntPtr]::Zero, [UIntPtr]::new(4096), 0x3000, 0x04)
+if ($address -eq [IntPtr]::Zero -or $target -eq [IntPtr]::Zero) { throw 'VirtualAlloc failed' }
+[System.Runtime.InteropServices.Marshal]::WriteInt64($address, $target.ToInt64())
+[System.Runtime.InteropServices.Marshal]::WriteInt32([IntPtr]($target.ToInt64() + 0x10), $Value)
 
 $payload = [pscustomobject]@{
   pid = $PID
   process = [System.Diagnostics.Process]::GetCurrentProcess().ProcessName
   address = ('0x{0:X}' -f $address.ToInt64())
+  offsets = '0x10'
   value = $Value
 }
 $payload | ConvertTo-Json -Compress | Set-Content -Path $StateFile -Encoding utf8
