@@ -3,7 +3,9 @@ param(
   [string]$Region = '',
   [int]$MaxWidth = 1280,
   [int]$Quality = 65,
-  [string]$Format = 'jpeg'
+  [string]$Format = 'jpeg',
+  [ValidateSet('auto', 'printwindow', 'screen')]
+  [string]$Method = 'auto'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,14 +49,33 @@ $bitmap = New-Object System.Drawing.Bitmap($width, $height, [System.Drawing.Imag
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
 $graphics.Clear([System.Drawing.Color]::Black)
 $captured = $false
-if ($Hwnd -ne 0) {
+$methodUsed = ''
+if ($Hwnd -ne 0 -and $Method -ne 'screen') {
   $hdc = $graphics.GetHdc()
   try { $captured = [Win32GameCapture]::PrintWindow([IntPtr]$Hwnd, $hdc, 2) } finally { $graphics.ReleaseHdc($hdc) }
+  if ($captured) {
+    $methodUsed = 'printwindow'
+    if ($Method -eq 'auto') {
+      # Some DirectX/GPU windows return true but paint an all-black surface.
+      $dark = 0; $samples = 0
+      for ($sx = 1; $sx -le 5; $sx++) {
+        for ($sy = 1; $sy -le 5; $sy++) {
+          $px = [Math]::Min($bitmap.Width - 1, [int]($bitmap.Width * $sx / 6))
+          $py = [Math]::Min($bitmap.Height - 1, [int]($bitmap.Height * $sy / 6))
+          $c = $bitmap.GetPixel($px, $py)
+          $samples++
+          if (($c.R + $c.G + $c.B) -lt 18) { $dark++ }
+        }
+      }
+      if ($samples -gt 0 -and ($dark / $samples) -ge 0.9) { $captured = $false; $methodUsed = '' }
+    }
+  }
 }
 if (-not $captured) {
   try {
     $graphics.CopyFromScreen($left, $top, 0, 0, (New-Object System.Drawing.Size($width, $height)), [System.Drawing.CopyPixelOperation]::SourceCopy)
     $captured = $true
+    $methodUsed = 'screen'
   } catch { $captured = $false }
 }
 $graphics.Dispose()
@@ -102,5 +123,6 @@ $bitmap.Dispose(); $stream.Dispose()
   height = $outHeight
   format = $formatName.ToLowerInvariant()
   bytes = $bytes.Length
+  method = $methodUsed
   base64 = [Convert]::ToBase64String($bytes)
 } | ConvertTo-Json -Compress

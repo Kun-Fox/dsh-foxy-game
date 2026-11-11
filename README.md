@@ -2,9 +2,9 @@
 
 让 Foxy 陪你玩游戏。不是“让模型看一张截图然后祈祷它能操作”，而是把**感知、决策、操作、交流**拆成可替换的适配器，先跑通一个可控的小闭环，再逐个游戏加适配。
 
-> 当前是 `0.1.11` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
+> 当前是 `0.1.12` 开发预览版。默认关闭所有自动操作；不会主动碰带反作弊的网游。
 
-### 开发进度（2026-11-12 04:46）
+### 开发进度（2026-11-12 04:56）
 
 - 已跑通 DSH 侧栏、窗口枚举、窗口截图、SHA-256 跳帧、视觉模型 JSON 决策、后台动作接口、自测游戏 HTTP 闭环。
 - 变化区域裁剪（实验，默认关闭）：ffmpeg 对比上一帧，只把变化块送视觉模型；原生测试窗实测 440×300（5.4 KB）→ 112×104（1.5 KB），鼠标坐标会按裁剪区域自动映射回整窗。
@@ -13,7 +13,7 @@
 - 混合感知已验证：Edge 小花园截图 + 自测游戏 HTTP 状态一起送视觉模型，prompt 同时包含 900×726 JPEG 与 `grid/player/steps` 结构化状态；模型返回 `D` 后玩家从 (0,0) 走到 (1,0)。
 - `npm test`：13/13 通过（设置/脱敏/裁剪参数/键位/视觉解析/策略/自测游戏/memory/插件路由/坐标映射）。
 - 真实 DSH `foxy-test` profile：侧栏 `Foxy Game` 已出现，`/api/dsh-foxy-game/status` 返回 200。
-- 真实窗口截图：`captureWindow` 对系统设置窗口返回 640×379 JPEG（约 15 KB）；mock 视觉接口收到图片并返回决策。
+- 真实窗口截图：`captureWindow` 对系统设置窗口返回 640×379 JPEG（约 15 KB）；mock 视觉接口收到图片并返回决策。`0.1.12` 起可选 `auto`/`printwindow`/`screen`：`auto` 在 PrintWindow 返回全黑时自动改用屏幕区域，系统设置窗口实测 `printwindow` 14,981 B、`screen` 14,333 B；全黑测试窗 `auto` 正确回退到 `screen`。
 - 自测游戏 memory 闭环：观察 → BFS 决策 → HTTP 动作 → 状态更新，已验证。
 - 只读进程内存（实验）：`scripts/memory.ps1` 支持按 PID/进程名、模块基址+偏移或绝对地址读取 `int32/uint32/int64/float/double`，并支持逗号分隔的指针链偏移；用测试进程验证“基址→指针→+0x10”读到 `424242`。只读，不写内存，也没有自动扫描。
 - 悬浮字幕可独立于语音运行：即使 `voiceEnabled:false`，只要 `overlayEnabled:true`，视觉模型的 `say` 也会显示在置顶字幕里，不强制开麦。已实测 overlay 进程启动、无热键进程。
@@ -136,7 +136,7 @@ test/           Node 内置测试
 
 ## 已知问题 / 下一步
 
-- [ ] 真实游戏窗口的 `PrintWindow` 在部分 DirectX 游戏返回黑屏；需要 `Windows.Graphics.Capture` 或 `ffmpeg gdigrab` 回退。Edge/Chromium 内容实测可截，但不是所有 GPU 加速窗口都行。
+- [ ] 真实游戏窗口的 `PrintWindow` 在部分 DirectX 游戏返回黑屏；`captureMethod:'screen'` 已能按窗口矩形截桌面，适合无边框/窗口化 DirectX，但独占全屏仍需要 `Windows.Graphics.Capture` 或 `ffmpeg gdigrab`。Edge/Chromium 内容实测可截，但不是所有 GPU 加速窗口都行。
 - [ ] 后台合成消息在 Edge 窗口实测无效（浏览器忽略）；原生 WinForms 测试窗用 `SendMessage` 已通过。真实游戏是否接受需逐个验证，不接受时只能回退前台 `SendInput` 或做 `AnchoredTouch`。
 - [x] 变化区域裁剪（实验，默认关闭）：ffmpeg diff 找 bbox，裁剪后只送变化块；鼠标坐标自动映射回整窗。只裁剪会丢失画面上下文，复杂游戏建议关闭或配合完整帧使用。
 - [ ] 视觉模型的动作坐标是归一化坐标，未做窗口 DPI 校正；高 DPI 需要实测。

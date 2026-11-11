@@ -14,6 +14,7 @@ test('settings normalize clamps numbers and keeps safe defaults', () => {
     maxWidth: 99999,
     jpegQuality: 10,
     mode: 'nonsense',
+    captureMethod: 'nonsense',
     enabled: true,
     actionMode: 'foreground',
   })
@@ -21,6 +22,7 @@ test('settings normalize clamps numbers and keeps safe defaults', () => {
   assert.equal(value.maxWidth, 3840)
   assert.equal(value.jpegQuality, 30)
   assert.equal(value.mode, 'screen')
+  assert.equal(value.captureMethod, 'auto')
   assert.equal(value.enabled, true)
   assert.equal(value.actionMode, 'foreground')
   assert.equal(value.personaPresetId, DEFAULT_PRESET_ID)
