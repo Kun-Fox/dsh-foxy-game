@@ -1,9 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply, internals } from '../lib/index.js'
+
+process.env.DSH_HOME = mkdtempSync(join(tmpdir(), 'foxy-game-plugin-test-'))
 
 function mount() {
   const routes = new Map()
